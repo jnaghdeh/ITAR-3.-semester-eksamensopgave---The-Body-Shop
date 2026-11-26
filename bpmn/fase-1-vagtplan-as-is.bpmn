@@ -1,0 +1,267 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_Fase1_Vagtplan_AS_IS" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.51.1">
+  <bpmn:error id="Error_OversetLovbrud" name="Overset lovbrud eller manglende nøglebærer" errorCode="ERR_COMPLIANCE_VIOLATION" />
+  <bpmn:collaboration id="Collaboration_Fase1_Vagtplan_AS_IS">
+    <bpmn:participant id="Participant_WhatsApp" name="WhatsApp (Privat beskedapp og gruppechat)" />
+    <bpmn:participant id="Participant_TheBodyShop_F1" name="Udarbejdelse og udgivelse af vagtplan (AS-IS)" processRef="Process_Fase1_Vagtplan_AS_IS" />
+    <bpmn:messageFlow id="MsgFlow_OenskerWhatsApp" name="Ustrukturerede ønsker, ferie &#38; utilgængelighed" sourceRef="Participant_WhatsApp" targetRef="Activity_IndsamlOensker" />
+    <bpmn:messageFlow id="MsgFlow_BilledeVagtplan" name="Billede af månedens fysiske papirkalender" sourceRef="Activity_SendBillede" targetRef="Participant_WhatsApp" />
+  </bpmn:collaboration>
+  <bpmn:process id="Process_Fase1_Vagtplan_AS_IS" name="Udarbejdelse og udgivelse af vagtplan (AS-IS)" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_F1">
+      <bpmn:lane id="Lane_Butikschef" name="Butikschef">
+        <bpmn:flowNodeRef>StartEvent_Fase1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_IndsamlOensker</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_UdarbejdPlan</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_KontrollerRegler</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>BoundaryError_OversetRegelbrud</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_UlovligPlan</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Regelbrud</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_RetKabale</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_MergePlan</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_OphaengKalender</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_SendBillede</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_PlanUdgivet</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="StartEvent_Fase1" name="Planlægningsperiode startet (ca. 4 uger før)">
+      <bpmn:outgoing>Flow_01</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerEventDefinition_F1" />
+    </bpmn:startEvent>
+    <bpmn:receiveTask id="Activity_IndsamlOensker" name="Indsaml ønsker, ferie og utilgængelighed">
+      <bpmn:incoming>Flow_01</bpmn:incoming>
+      <bpmn:outgoing>Flow_02</bpmn:outgoing>
+    </bpmn:receiveTask>
+    <bpmn:manualTask id="Activity_UdarbejdPlan" name="Udarbejd vagtplan på papirkalender">
+      <bpmn:incoming>Flow_02</bpmn:incoming>
+      <bpmn:outgoing>Flow_03</bpmn:outgoing>
+      <bpmn:dataOutputAssociation id="DataOutputAssoc_Udarbejd">
+        <bpmn:targetRef>DataObjectRef_Papirkalender</bpmn:targetRef>
+      </bpmn:dataOutputAssociation>
+    </bpmn:manualTask>
+    <bpmn:manualTask id="Activity_KontrollerRegler" name="Kontrollér lovregler og kompetencer manuelt">
+      <bpmn:incoming>Flow_03</bpmn:incoming>
+      <bpmn:outgoing>Flow_04</bpmn:outgoing>
+      <bpmn:property id="Property_Regler" name="__targetRef_placeholder" />
+      <bpmn:dataInputAssociation id="DataInputAssoc_Regler">
+        <bpmn:sourceRef>DataStoreRef_LovOgKompetencer</bpmn:sourceRef>
+        <bpmn:targetRef>Property_Regler</bpmn:targetRef>
+      </bpmn:dataInputAssociation>
+    </bpmn:manualTask>
+    <bpmn:boundaryEvent id="BoundaryError_OversetRegelbrud" name="Regelbrud overset" attachedToRef="Activity_KontrollerRegler">
+      <bpmn:outgoing>Flow_Error_Lovbrud</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="ErrorEventDef_Boundary_Lovbrud" errorRef="Error_OversetLovbrud" />
+    </bpmn:boundaryEvent>
+    <bpmn:endEvent id="EndEvent_UlovligPlan" name="Ulovlig vagtkombination / manglende nøglebærer">
+      <bpmn:incoming>Flow_Error_Lovbrud</bpmn:incoming>
+      <bpmn:errorEventDefinition id="ErrorEventDef_End_Lovbrud" errorRef="Error_OversetLovbrud" />
+    </bpmn:endEvent>
+    <bpmn:exclusiveGateway id="Gateway_Regelbrud" name="Regelbrud fundet?">
+      <bpmn:incoming>Flow_04</bpmn:incoming>
+      <bpmn:outgoing>Flow_Ja</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Nej</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:manualTask id="Activity_RetKabale" name="Ret vagtkabale manuelt på papir">
+      <bpmn:incoming>Flow_Ja</bpmn:incoming>
+      <bpmn:outgoing>Flow_Rettet</bpmn:outgoing>
+    </bpmn:manualTask>
+    <bpmn:exclusiveGateway id="Gateway_MergePlan">
+      <bpmn:incoming>Flow_Nej</bpmn:incoming>
+      <bpmn:incoming>Flow_Rettet</bpmn:incoming>
+      <bpmn:outgoing>Flow_05</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:manualTask id="Activity_OphaengKalender" name="Ophæng papirkalender i baglokale">
+      <bpmn:incoming>Flow_05</bpmn:incoming>
+      <bpmn:outgoing>Flow_06</bpmn:outgoing>
+      <bpmn:dataOutputAssociation id="DataOutputAssoc_Ophaeng">
+        <bpmn:targetRef>DataObjectRef_Papirkalender</bpmn:targetRef>
+      </bpmn:dataOutputAssociation>
+    </bpmn:manualTask>
+    <bpmn:sendTask id="Activity_SendBillede" name="Send billede af vagtplan i WhatsApp">
+      <bpmn:incoming>Flow_06</bpmn:incoming>
+      <bpmn:outgoing>Flow_07</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="EndEvent_PlanUdgivet" name="Månedsvagtplan offentliggjort">
+      <bpmn:incoming>Flow_07</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:dataStoreReference id="DataStoreRef_LovOgKompetencer" name="Arbejdstidsregler (11t, 48t, fridøgn, pause) &#38; kompetencer (tavs viden)" />
+    <bpmn:dataObject id="DataObject_Papirkalender" />
+    <bpmn:dataObjectReference id="DataObjectRef_Papirkalender" name="Fysisk papirkalender (baglokale)" dataObjectRef="DataObject_Papirkalender" />
+    <bpmn:sequenceFlow id="Flow_01" sourceRef="StartEvent_Fase1" targetRef="Activity_IndsamlOensker" />
+    <bpmn:sequenceFlow id="Flow_02" sourceRef="Activity_IndsamlOensker" targetRef="Activity_UdarbejdPlan" />
+    <bpmn:sequenceFlow id="Flow_03" sourceRef="Activity_UdarbejdPlan" targetRef="Activity_KontrollerRegler" />
+    <bpmn:sequenceFlow id="Flow_04" sourceRef="Activity_KontrollerRegler" targetRef="Gateway_Regelbrud" />
+    <bpmn:sequenceFlow id="Flow_Error_Lovbrud" sourceRef="BoundaryError_OversetRegelbrud" targetRef="EndEvent_UlovligPlan" />
+    <bpmn:sequenceFlow id="Flow_Ja" name="Ja" sourceRef="Gateway_Regelbrud" targetRef="Activity_RetKabale" />
+    <bpmn:sequenceFlow id="Flow_Nej" name="Nej" sourceRef="Gateway_Regelbrud" targetRef="Gateway_MergePlan" />
+    <bpmn:sequenceFlow id="Flow_Rettet" sourceRef="Activity_RetKabale" targetRef="Gateway_MergePlan" />
+    <bpmn:sequenceFlow id="Flow_05" sourceRef="Gateway_MergePlan" targetRef="Activity_OphaengKalender" />
+    <bpmn:sequenceFlow id="Flow_06" sourceRef="Activity_OphaengKalender" targetRef="Activity_SendBillede" />
+    <bpmn:sequenceFlow id="Flow_07" sourceRef="Activity_SendBillede" targetRef="EndEvent_PlanUdgivet" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_F1">
+    <bpmndi:BPMNPlane id="BPMNPlane_F1" bpmnElement="Collaboration_Fase1_Vagtplan_AS_IS">
+      <bpmndi:BPMNShape id="Participant_WhatsApp_di" bpmnElement="Participant_WhatsApp" isHorizontal="true">
+        <dc:Bounds x="160" y="60" width="1550" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Participant_TheBodyShop_F1_di" bpmnElement="Participant_TheBodyShop_F1" isHorizontal="true">
+        <dc:Bounds x="160" y="200" width="1550" height="380" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Butikschef_di" bpmnElement="Lane_Butikschef" isHorizontal="true">
+        <dc:Bounds x="190" y="200" width="1520" height="380" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_Fase1_di" bpmnElement="StartEvent_Fase1">
+        <dc:Bounds x="245" y="352" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="220" y="396" width="86" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_IndsamlOensker_di" bpmnElement="Activity_IndsamlOensker">
+        <dc:Bounds x="335" y="325" width="150" height="90" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_UdarbejdPlan_di" bpmnElement="Activity_UdarbejdPlan">
+        <dc:Bounds x="535" y="325" width="150" height="90" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_KontrollerRegler_di" bpmnElement="Activity_KontrollerRegler">
+        <dc:Bounds x="735" y="325" width="150" height="90" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BoundaryError_OversetRegelbrud_di" bpmnElement="BoundaryError_OversetRegelbrud">
+        <dc:Bounds x="792" y="397" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="706" y="432" width="82" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_UlovligPlan_di" bpmnElement="EndEvent_UlovligPlan">
+        <dc:Bounds x="792" y="482" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="836" y="478" width="140" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Regelbrud_di" bpmnElement="Gateway_Regelbrud" isMarkerVisible="true">
+        <dc:Bounds x="935" y="345" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="918" y="402" width="84" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_RetKabale_di" bpmnElement="Activity_RetKabale">
+        <dc:Bounds x="1015" y="225" width="145" height="76" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_MergePlan_di" bpmnElement="Gateway_MergePlan" isMarkerVisible="true">
+        <dc:Bounds x="1185" y="345" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_OphaengKalender_di" bpmnElement="Activity_OphaengKalender">
+        <dc:Bounds x="1275" y="325" width="140" height="90" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_SendBillede_di" bpmnElement="Activity_SendBillede">
+        <dc:Bounds x="1450" y="325" width="140" height="90" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_PlanUdgivet_di" bpmnElement="EndEvent_PlanUdgivet">
+        <dc:Bounds x="1625" y="352" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1600" y="396" width="86" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DataStoreRef_LovOgKompetencer_di" bpmnElement="DataStoreRef_LovOgKompetencer">
+        <dc:Bounds x="785" y="230" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="615" y="226" width="160" height="53" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DataObjectRef_Papirkalender_di" bpmnElement="DataObjectRef_Papirkalender">
+        <dc:Bounds x="592" y="475" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="462" y="482" width="122" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_01_di" bpmnElement="Flow_01">
+        <di:waypoint x="281" y="370" />
+        <di:waypoint x="335" y="370" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_02_di" bpmnElement="Flow_02">
+        <di:waypoint x="485" y="370" />
+        <di:waypoint x="535" y="370" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_03_di" bpmnElement="Flow_03">
+        <di:waypoint x="685" y="370" />
+        <di:waypoint x="735" y="370" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_04_di" bpmnElement="Flow_04">
+        <di:waypoint x="885" y="370" />
+        <di:waypoint x="935" y="370" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Error_Lovbrud_di" bpmnElement="Flow_Error_Lovbrud">
+        <di:waypoint x="810" y="433" />
+        <di:waypoint x="810" y="482" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Ja_di" bpmnElement="Flow_Ja">
+        <di:waypoint x="960" y="345" />
+        <di:waypoint x="960" y="263" />
+        <di:waypoint x="1015" y="263" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="968" y="296" width="15" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Nej_di" bpmnElement="Flow_Nej">
+        <di:waypoint x="985" y="370" />
+        <di:waypoint x="1185" y="370" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1075" y="352" width="20" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Rettet_di" bpmnElement="Flow_Rettet">
+        <di:waypoint x="1160" y="263" />
+        <di:waypoint x="1210" y="263" />
+        <di:waypoint x="1210" y="345" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_05_di" bpmnElement="Flow_05">
+        <di:waypoint x="1235" y="370" />
+        <di:waypoint x="1275" y="370" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_06_di" bpmnElement="Flow_06">
+        <di:waypoint x="1415" y="370" />
+        <di:waypoint x="1450" y="370" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_07_di" bpmnElement="Flow_07">
+        <di:waypoint x="1590" y="370" />
+        <di:waypoint x="1625" y="370" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DataInputAssoc_Regler_di" bpmnElement="DataInputAssoc_Regler">
+        <di:waypoint x="810" y="280" />
+        <di:waypoint x="810" y="325" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DataOutputAssoc_Udarbejd_di" bpmnElement="DataOutputAssoc_Udarbejd">
+        <di:waypoint x="610" y="415" />
+        <di:waypoint x="610" y="475" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DataOutputAssoc_Ophaeng_di" bpmnElement="DataOutputAssoc_Ophaeng">
+        <di:waypoint x="1345" y="415" />
+        <di:waypoint x="1345" y="550" />
+        <di:waypoint x="610" y="550" />
+        <di:waypoint x="610" y="525" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MsgFlow_OenskerWhatsApp_di" bpmnElement="MsgFlow_OenskerWhatsApp">
+        <di:waypoint x="410" y="140" />
+        <di:waypoint x="410" y="325" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="418" y="150" width="125" height="36" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MsgFlow_BilledeVagtplan_di" bpmnElement="MsgFlow_BilledeVagtplan">
+        <di:waypoint x="1520" y="325" />
+        <di:waypoint x="1520" y="140" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1392" y="150" width="122" height="36" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

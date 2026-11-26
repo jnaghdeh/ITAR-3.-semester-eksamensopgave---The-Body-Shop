@@ -1,0 +1,347 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_Fase2_Vagtbytte_Sygdom_AS_IS" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.51.1">
+  <bpmn:collaboration id="Collaboration_Fase2_Vagtbytte_AS_IS">
+    <bpmn:participant id="Participant_WhatsApp" name="WhatsApp (Privat beskedapp og gruppechat)" />
+    <bpmn:participant id="Participant_TheBodyShop_F2" name="Vagtbytte, akut sygdom og driftskommunikation (AS-IS)" processRef="Process_Fase2_Vagtbytte_AS_IS" />
+    <bpmn:messageFlow id="MsgFlow_EfterspoergBytte" name="Vagtbytte-forespørgsel i gruppechat" sourceRef="Activity_SendBytteForespoergsel" targetRef="Participant_WhatsApp" />
+    <bpmn:messageFlow id="MsgFlow_SygdomWhatsApp" name="Opfølgende sygdomsbesked for at hjælpe" sourceRef="Activity_SkrivWhatsAppSyg" targetRef="Participant_WhatsApp" />
+    <bpmn:messageFlow id="MsgFlow_BydIndAkut" name="Koordinering af akut vagtdækning" sourceRef="Participant_WhatsApp" targetRef="Activity_KoordinerAkut" />
+    <bpmn:messageFlow id="MsgFlow_SvarBytte" name="Svar &#38; aftale i WhatsApp-tråd" sourceRef="Participant_WhatsApp" targetRef="Activity_AfventSvarBytte" />
+    <bpmn:messageFlow id="MsgFlow_BekraeftelseWhatsApp" name="Tekstbekræftelse (risiko for forældede billeder)" sourceRef="Activity_BekraeftWhatsApp" targetRef="Participant_WhatsApp" />
+  </bpmn:collaboration>
+  <bpmn:process id="Process_Fase2_Vagtbytte_AS_IS" name="Vagtbytte, akut sygdom og driftskommunikation (AS-IS)" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_F2">
+      <bpmn:lane id="Lane_Butiksmedarbejder" name="Butiksmedarbejder (Fuldtid / Deltid 18+)">
+        <bpmn:flowNodeRef>StartEvent_Fase2</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_DriftType</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_SendBytteForespoergsel</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_RingChef</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_SkrivWhatsAppSyg</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_IngenBytte</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Kollega" name="Kollega / Øvrigt butiksteam">
+        <bpmn:flowNodeRef>Activity_AfventSvarBytte</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>BoundaryTimer_IntetSvar</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_KoordinerAkut</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_MergeDrift</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Butikschef" name="Butikschef">
+        <bpmn:flowNodeRef>Activity_TjekKompetencer</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Godkendt</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_BytteAfvist</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_RetKalender</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_BekraeftWhatsApp</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_VagtOpdateret</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="StartEvent_Fase2" name="Behov for vagtændring opstået">
+      <bpmn:outgoing>Flow_01</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:exclusiveGateway id="Gateway_DriftType" name="Vagtbytte eller akut sygdom?">
+      <bpmn:incoming>Flow_01</bpmn:incoming>
+      <bpmn:outgoing>Flow_Vagtbytte</bpmn:outgoing>
+      <bpmn:outgoing>Flow_AkutSygdom</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sendTask id="Activity_SendBytteForespoergsel" name="Send forespørgsel om vagtbytte i WhatsApp">
+      <bpmn:incoming>Flow_Vagtbytte</bpmn:incoming>
+      <bpmn:outgoing>Flow_Bytte_Afvent</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:manualTask id="Activity_RingChef" name="Ring til butikschef og meld sygdom">
+      <bpmn:incoming>Flow_AkutSygdom</bpmn:incoming>
+      <bpmn:outgoing>Flow_Ring_WhatsApp</bpmn:outgoing>
+    </bpmn:manualTask>
+    <bpmn:sendTask id="Activity_SkrivWhatsAppSyg" name="Skriv i WhatsApp for at hjælpe med dækning">
+      <bpmn:incoming>Flow_Ring_WhatsApp</bpmn:incoming>
+      <bpmn:outgoing>Flow_Syg_Akut</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="EndEvent_IngenBytte" name="Vagtbytte ikke gennemført">
+      <bpmn:incoming>Flow_Timeout</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:receiveTask id="Activity_AfventSvarBytte" name="Afvent svar og aftal vagtbytte i WhatsApp">
+      <bpmn:incoming>Flow_Bytte_Afvent</bpmn:incoming>
+      <bpmn:outgoing>Flow_Bytte_Merge</bpmn:outgoing>
+    </bpmn:receiveTask>
+    <bpmn:boundaryEvent id="BoundaryTimer_IntetSvar" name="Intet svar / druknet i chat" attachedToRef="Activity_AfventSvarBytte">
+      <bpmn:outgoing>Flow_Timeout</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerEventDef_IntetSvar" />
+    </bpmn:boundaryEvent>
+    <bpmn:receiveTask id="Activity_KoordinerAkut" name="Koordinér og byd ind på akut vagt">
+      <bpmn:incoming>Flow_Syg_Akut</bpmn:incoming>
+      <bpmn:outgoing>Flow_Akut_Merge</bpmn:outgoing>
+    </bpmn:receiveTask>
+    <bpmn:exclusiveGateway id="Gateway_MergeDrift">
+      <bpmn:incoming>Flow_Bytte_Merge</bpmn:incoming>
+      <bpmn:incoming>Flow_Akut_Merge</bpmn:incoming>
+      <bpmn:outgoing>Flow_TilChef</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:manualTask id="Activity_TjekKompetencer" name="Tjek kompetencer og lovkrav manuelt">
+      <bpmn:incoming>Flow_TilChef</bpmn:incoming>
+      <bpmn:outgoing>Flow_Tjek_Gw</bpmn:outgoing>
+    </bpmn:manualTask>
+    <bpmn:exclusiveGateway id="Gateway_Godkendt" name="Overholder krav og godkendt?">
+      <bpmn:incoming>Flow_Tjek_Gw</bpmn:incoming>
+      <bpmn:outgoing>Flow_Nej_Afvist</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Ja_Godkendt</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="EndEvent_BytteAfvist" name="Vagtændring afvist">
+      <bpmn:incoming>Flow_Nej_Afvist</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:manualTask id="Activity_RetKalender" name="Ret fysisk papirkalender manuelt">
+      <bpmn:incoming>Flow_Ja_Godkendt</bpmn:incoming>
+      <bpmn:outgoing>Flow_Ret_Bekraeft</bpmn:outgoing>
+      <bpmn:dataOutputAssociation id="DataOutputAssoc_Ret">
+        <bpmn:targetRef>DataObjectRef_Papirkalender2</bpmn:targetRef>
+      </bpmn:dataOutputAssociation>
+    </bpmn:manualTask>
+    <bpmn:sendTask id="Activity_BekraeftWhatsApp" name="Bekræft ændring i WhatsApp">
+      <bpmn:incoming>Flow_Ret_Bekraeft</bpmn:incoming>
+      <bpmn:outgoing>Flow_Bekraeft_End</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="EndEvent_VagtOpdateret" name="Vagtplan opdateret manuelt">
+      <bpmn:incoming>Flow_Bekraeft_End</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:dataObject id="DataObject_Papirkalender2" />
+    <bpmn:dataObjectReference id="DataObjectRef_Papirkalender2" name="Fysisk papirkalender (rettet manuelt)" dataObjectRef="DataObject_Papirkalender2" />
+    <bpmn:sequenceFlow id="Flow_01" sourceRef="StartEvent_Fase2" targetRef="Gateway_DriftType" />
+    <bpmn:sequenceFlow id="Flow_Vagtbytte" name="Vagtbytte" sourceRef="Gateway_DriftType" targetRef="Activity_SendBytteForespoergsel" />
+    <bpmn:sequenceFlow id="Flow_AkutSygdom" name="Akut sygdom" sourceRef="Gateway_DriftType" targetRef="Activity_RingChef" />
+    <bpmn:sequenceFlow id="Flow_Bytte_Afvent" sourceRef="Activity_SendBytteForespoergsel" targetRef="Activity_AfventSvarBytte" />
+    <bpmn:sequenceFlow id="Flow_Timeout" sourceRef="BoundaryTimer_IntetSvar" targetRef="EndEvent_IngenBytte" />
+    <bpmn:sequenceFlow id="Flow_Bytte_Merge" sourceRef="Activity_AfventSvarBytte" targetRef="Gateway_MergeDrift" />
+    <bpmn:sequenceFlow id="Flow_Ring_WhatsApp" sourceRef="Activity_RingChef" targetRef="Activity_SkrivWhatsAppSyg" />
+    <bpmn:sequenceFlow id="Flow_Syg_Akut" sourceRef="Activity_SkrivWhatsAppSyg" targetRef="Activity_KoordinerAkut" />
+    <bpmn:sequenceFlow id="Flow_Akut_Merge" sourceRef="Activity_KoordinerAkut" targetRef="Gateway_MergeDrift" />
+    <bpmn:sequenceFlow id="Flow_TilChef" sourceRef="Gateway_MergeDrift" targetRef="Activity_TjekKompetencer" />
+    <bpmn:sequenceFlow id="Flow_Tjek_Gw" sourceRef="Activity_TjekKompetencer" targetRef="Gateway_Godkendt" />
+    <bpmn:sequenceFlow id="Flow_Nej_Afvist" name="Nej" sourceRef="Gateway_Godkendt" targetRef="EndEvent_BytteAfvist" />
+    <bpmn:sequenceFlow id="Flow_Ja_Godkendt" name="Ja" sourceRef="Gateway_Godkendt" targetRef="Activity_RetKalender" />
+    <bpmn:sequenceFlow id="Flow_Ret_Bekraeft" sourceRef="Activity_RetKalender" targetRef="Activity_BekraeftWhatsApp" />
+    <bpmn:sequenceFlow id="Flow_Bekraeft_End" sourceRef="Activity_BekraeftWhatsApp" targetRef="EndEvent_VagtOpdateret" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_F2">
+    <bpmndi:BPMNPlane id="BPMNPlane_F2" bpmnElement="Collaboration_Fase2_Vagtbytte_AS_IS">
+      <bpmndi:BPMNShape id="Participant_WhatsApp_di" bpmnElement="Participant_WhatsApp" isHorizontal="true">
+        <dc:Bounds x="160" y="60" width="1790" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Participant_TheBodyShop_F2_di" bpmnElement="Participant_TheBodyShop_F2" isHorizontal="true">
+        <dc:Bounds x="160" y="200" width="1790" height="760" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Butiksmedarbejder_di" bpmnElement="Lane_Butiksmedarbejder" isHorizontal="true">
+        <dc:Bounds x="190" y="200" width="1760" height="240" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Kollega_di" bpmnElement="Lane_Kollega" isHorizontal="true">
+        <dc:Bounds x="190" y="440" width="1760" height="260" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Butikschef_di" bpmnElement="Lane_Butikschef" isHorizontal="true">
+        <dc:Bounds x="190" y="700" width="1760" height="260" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_Fase2_di" bpmnElement="StartEvent_Fase2">
+        <dc:Bounds x="240" y="302" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="216" y="346" width="84" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_DriftType_di" bpmnElement="Gateway_DriftType" isMarkerVisible="true">
+        <dc:Bounds x="330" y="295" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="285" y="248" width="92" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_SendBytteForespoergsel_di" bpmnElement="Activity_SendBytteForespoergsel">
+        <dc:Bounds x="445" y="220" width="155" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_RingChef_di" bpmnElement="Activity_RingChef">
+        <dc:Bounds x="445" y="335" width="155" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_SkrivWhatsAppSyg_di" bpmnElement="Activity_SkrivWhatsAppSyg">
+        <dc:Bounds x="650" y="335" width="155" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_IngenBytte_di" bpmnElement="EndEvent_IngenBytte">
+        <dc:Bounds x="977" y="342" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1021" y="344" width="82" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_AfventSvarBytte_di" bpmnElement="Activity_AfventSvarBytte">
+        <dc:Bounds x="865" y="470" width="160" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BoundaryTimer_IntetSvar_di" bpmnElement="BoundaryTimer_IntetSvar">
+        <dc:Bounds x="977" y="452" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1018" y="446" width="84" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_KoordinerAkut_di" bpmnElement="Activity_KoordinerAkut">
+        <dc:Bounds x="650" y="585" width="155" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_MergeDrift_di" bpmnElement="Gateway_MergeDrift" isMarkerVisible="true">
+        <dc:Bounds x="1095" y="485" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_TjekKompetencer_di" bpmnElement="Activity_TjekKompetencer">
+        <dc:Bounds x="1200" y="740" width="150" height="90" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Godkendt_di" bpmnElement="Gateway_Godkendt" isMarkerVisible="true">
+        <dc:Bounds x="1395" y="760" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1376" y="716" width="88" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_BytteAfvist_di" bpmnElement="EndEvent_BytteAfvist">
+        <dc:Bounds x="1402" y="875" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1378" y="918" width="84" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_RetKalender_di" bpmnElement="Activity_RetKalender">
+        <dc:Bounds x="1495" y="740" width="150" height="90" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_BekraeftWhatsApp_di" bpmnElement="Activity_BekraeftWhatsApp">
+        <dc:Bounds x="1685" y="740" width="150" height="90" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_VagtOpdateret_di" bpmnElement="EndEvent_VagtOpdateret">
+        <dc:Bounds x="1875" y="767" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1849" y="810" width="88" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DataObjectRef_Papirkalender2_di" bpmnElement="DataObjectRef_Papirkalender2">
+        <dc:Bounds x="1552" y="875" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1596" y="880" width="110" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_01_di" bpmnElement="Flow_01">
+        <di:waypoint x="276" y="320" />
+        <di:waypoint x="330" y="320" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Vagtbytte_di" bpmnElement="Flow_Vagtbytte">
+        <di:waypoint x="355" y="295" />
+        <di:waypoint x="355" y="260" />
+        <di:waypoint x="445" y="260" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="370" y="242" width="48" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_AkutSygdom_di" bpmnElement="Flow_AkutSygdom">
+        <di:waypoint x="355" y="345" />
+        <di:waypoint x="355" y="375" />
+        <di:waypoint x="445" y="375" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="364" y="381" width="66" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Bytte_Afvent_di" bpmnElement="Flow_Bytte_Afvent">
+        <di:waypoint x="600" y="260" />
+        <di:waypoint x="840" y="260" />
+        <di:waypoint x="840" y="510" />
+        <di:waypoint x="865" y="510" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Timeout_di" bpmnElement="Flow_Timeout">
+        <di:waypoint x="995" y="452" />
+        <di:waypoint x="995" y="378" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Bytte_Merge_di" bpmnElement="Flow_Bytte_Merge">
+        <di:waypoint x="1025" y="510" />
+        <di:waypoint x="1095" y="510" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Ring_WhatsApp_di" bpmnElement="Flow_Ring_WhatsApp">
+        <di:waypoint x="600" y="375" />
+        <di:waypoint x="650" y="375" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Syg_Akut_di" bpmnElement="Flow_Syg_Akut">
+        <di:waypoint x="727" y="415" />
+        <di:waypoint x="727" y="585" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Akut_Merge_di" bpmnElement="Flow_Akut_Merge">
+        <di:waypoint x="805" y="625" />
+        <di:waypoint x="1120" y="625" />
+        <di:waypoint x="1120" y="535" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_TilChef_di" bpmnElement="Flow_TilChef">
+        <di:waypoint x="1145" y="510" />
+        <di:waypoint x="1172" y="510" />
+        <di:waypoint x="1172" y="785" />
+        <di:waypoint x="1200" y="785" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Tjek_Gw_di" bpmnElement="Flow_Tjek_Gw">
+        <di:waypoint x="1350" y="785" />
+        <di:waypoint x="1395" y="785" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Nej_Afvist_di" bpmnElement="Flow_Nej_Afvist">
+        <di:waypoint x="1420" y="810" />
+        <di:waypoint x="1420" y="875" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1428" y="836" width="20" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Ja_Godkendt_di" bpmnElement="Flow_Ja_Godkendt">
+        <di:waypoint x="1445" y="785" />
+        <di:waypoint x="1495" y="785" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1462" y="767" width="15" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Ret_Bekraeft_di" bpmnElement="Flow_Ret_Bekraeft">
+        <di:waypoint x="1645" y="785" />
+        <di:waypoint x="1685" y="785" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Bekraeft_End_di" bpmnElement="Flow_Bekraeft_End">
+        <di:waypoint x="1835" y="785" />
+        <di:waypoint x="1875" y="785" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DataOutputAssoc_Ret_di" bpmnElement="DataOutputAssoc_Ret">
+        <di:waypoint x="1570" y="830" />
+        <di:waypoint x="1570" y="875" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MsgFlow_EfterspoergBytte_di" bpmnElement="MsgFlow_EfterspoergBytte">
+        <di:waypoint x="522" y="220" />
+        <di:waypoint x="522" y="140" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="400" y="148" width="116" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MsgFlow_SygdomWhatsApp_di" bpmnElement="MsgFlow_SygdomWhatsApp">
+        <di:waypoint x="727" y="335" />
+        <di:waypoint x="727" y="140" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="606" y="148" width="116" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MsgFlow_BydIndAkut_di" bpmnElement="MsgFlow_BydIndAkut">
+        <di:waypoint x="822" y="140" />
+        <di:waypoint x="822" y="625" />
+        <di:waypoint x="805" y="625" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="750" y="148" width="68" height="36" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MsgFlow_SvarBytte_di" bpmnElement="MsgFlow_SvarBytte">
+        <di:waypoint x="920" y="140" />
+        <di:waypoint x="920" y="470" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="928" y="148" width="110" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MsgFlow_BekraeftelseWhatsApp_di" bpmnElement="MsgFlow_BekraeftelseWhatsApp">
+        <di:waypoint x="1760" y="740" />
+        <di:waypoint x="1760" y="140" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1624" y="148" width="130" height="36" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

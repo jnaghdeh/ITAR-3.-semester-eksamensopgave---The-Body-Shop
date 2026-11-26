@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_Fase3_Tidsregistrering_Loen_AS_IS" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.51.1">
+  <bpmn:error id="Error_TastefejlLoen" name="Tastefejl eller ulæselig håndskrift i løngrundlag" errorCode="ERR_PAYROLL_INPUT" />
+  <bpmn:collaboration id="Collaboration_Fase3_Loen_AS_IS">
+    <bpmn:participant id="Participant_TheBodyShop_F3" name="Tidsregistrering og klargøring til løn (AS-IS)" processRef="Process_Fase3_Loen_AS_IS" />
+    <bpmn:participant id="Participant_SalaryDK" name="salary.dk (Eksternt lønsystem)" />
+    <bpmn:messageFlow id="MsgFlow_SalaryDK" name="Manuel indtastning af optalte timer &#38; afvigelser" sourceRef="Activity_IndtastSalaryDK" targetRef="Participant_SalaryDK" />
+  </bpmn:collaboration>
+  <bpmn:process id="Process_Fase3_Loen_AS_IS" name="Tidsregistrering og klargøring til løn (AS-IS)" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_F3">
+      <bpmn:lane id="Lane_Butiksmedarbejder" name="Butiksmedarbejder (Fuldtid / Deltid 18+)">
+        <bpmn:flowNodeRef>StartEvent_Fase3</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_NoterTimer</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Butikschef" name="Butikschef">
+        <bpmn:flowNodeRef>Event_Maanedsslut</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_OptaelTimer</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_IndtastSalaryDK</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>BoundaryError_Tastefejl</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_Loenfejl</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_UdskiftKalender</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_LoenKlargjort</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="StartEvent_Fase3" name="Vagt afholdt eller afvigelse opstået">
+      <bpmn:outgoing>Flow_01</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:manualTask id="Activity_NoterTimer" name="Notér faktiske timer og afvigelser med håndskrift">
+      <bpmn:incoming>Flow_01</bpmn:incoming>
+      <bpmn:outgoing>Flow_02</bpmn:outgoing>
+      <bpmn:dataOutputAssociation id="DataOutputAssoc_Noter">
+        <bpmn:targetRef>DataObjectRef_Papirkalender3</bpmn:targetRef>
+      </bpmn:dataOutputAssociation>
+    </bpmn:manualTask>
+    <bpmn:intermediateCatchEvent id="Event_Maanedsslut" name="Lønperiode afsluttet (den 1.–31.)">
+      <bpmn:incoming>Flow_02</bpmn:incoming>
+      <bpmn:outgoing>Flow_03</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerEventDef_Maanedsslut" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:manualTask id="Activity_OptaelTimer" name="Optæl månedens timer manuelt fra papir">
+      <bpmn:incoming>Flow_03</bpmn:incoming>
+      <bpmn:outgoing>Flow_04</bpmn:outgoing>
+      <bpmn:property id="Property_Optael" name="__targetRef_placeholder" />
+      <bpmn:dataInputAssociation id="DataInputAssoc_Optael">
+        <bpmn:sourceRef>DataObjectRef_Papirkalender3</bpmn:sourceRef>
+        <bpmn:targetRef>Property_Optael</bpmn:targetRef>
+      </bpmn:dataInputAssociation>
+    </bpmn:manualTask>
+    <bpmn:userTask id="Activity_IndtastSalaryDK" name="Indtast timer enkeltvis i salary.dk">
+      <bpmn:incoming>Flow_04</bpmn:incoming>
+      <bpmn:outgoing>Flow_05</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="BoundaryError_Tastefejl" name="Tastefejl / ulæselig håndskrift" attachedToRef="Activity_IndtastSalaryDK">
+      <bpmn:outgoing>Flow_Error_Tastefejl</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="ErrorEventDef_Boundary_Loen" errorRef="Error_TastefejlLoen" />
+    </bpmn:boundaryEvent>
+    <bpmn:endEvent id="EndEvent_Loenfejl" name="Forkert løngrundlag / mangelfuld dokumentation">
+      <bpmn:incoming>Flow_Error_Tastefejl</bpmn:incoming>
+      <bpmn:errorEventDefinition id="ErrorEventDef_End_Loen" errorRef="Error_TastefejlLoen" />
+    </bpmn:endEvent>
+    <bpmn:manualTask id="Activity_UdskiftKalender" name="Udskift fysisk papirkalender ved månedsskifte">
+      <bpmn:incoming>Flow_05</bpmn:incoming>
+      <bpmn:outgoing>Flow_06</bpmn:outgoing>
+    </bpmn:manualTask>
+    <bpmn:endEvent id="EndEvent_LoenKlargjort" name="Løngrundlag indtastet i salary.dk">
+      <bpmn:incoming>Flow_06</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:dataObject id="DataObject_Papirkalender3" />
+    <bpmn:dataObjectReference id="DataObjectRef_Papirkalender3" name="Fysisk papirkalender (håndskrevne timer)" dataObjectRef="DataObject_Papirkalender3" />
+    <bpmn:sequenceFlow id="Flow_01" sourceRef="StartEvent_Fase3" targetRef="Activity_NoterTimer" />
+    <bpmn:sequenceFlow id="Flow_02" sourceRef="Activity_NoterTimer" targetRef="Event_Maanedsslut" />
+    <bpmn:sequenceFlow id="Flow_03" sourceRef="Event_Maanedsslut" targetRef="Activity_OptaelTimer" />
+    <bpmn:sequenceFlow id="Flow_04" sourceRef="Activity_OptaelTimer" targetRef="Activity_IndtastSalaryDK" />
+    <bpmn:sequenceFlow id="Flow_Error_Tastefejl" sourceRef="BoundaryError_Tastefejl" targetRef="EndEvent_Loenfejl" />
+    <bpmn:sequenceFlow id="Flow_05" sourceRef="Activity_IndtastSalaryDK" targetRef="Activity_UdskiftKalender" />
+    <bpmn:sequenceFlow id="Flow_06" sourceRef="Activity_UdskiftKalender" targetRef="EndEvent_LoenKlargjort" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_F3">
+    <bpmndi:BPMNPlane id="BPMNPlane_F3" bpmnElement="Collaboration_Fase3_Loen_AS_IS">
+      <bpmndi:BPMNShape id="Participant_TheBodyShop_F3_di" bpmnElement="Participant_TheBodyShop_F3" isHorizontal="true">
+        <dc:Bounds x="160" y="80" width="1100" height="520" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Butiksmedarbejder_di" bpmnElement="Lane_Butiksmedarbejder" isHorizontal="true">
+        <dc:Bounds x="190" y="80" width="1070" height="200" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Butikschef_di" bpmnElement="Lane_Butikschef" isHorizontal="true">
+        <dc:Bounds x="190" y="280" width="1070" height="320" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Participant_SalaryDK_di" bpmnElement="Participant_SalaryDK" isHorizontal="true">
+        <dc:Bounds x="160" y="670" width="1100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_Fase3_di" bpmnElement="StartEvent_Fase3">
+        <dc:Bounds x="245" y="162" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="220" y="206" width="86" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_NoterTimer_di" bpmnElement="Activity_NoterTimer">
+        <dc:Bounds x="335" y="135" width="160" height="90" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_Maanedsslut_di" bpmnElement="Event_Maanedsslut">
+        <dc:Bounds x="397" y="417" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="369" y="460" width="92" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_OptaelTimer_di" bpmnElement="Activity_OptaelTimer">
+        <dc:Bounds x="520" y="390" width="150" height="90" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_IndtastSalaryDK_di" bpmnElement="Activity_IndtastSalaryDK">
+        <dc:Bounds x="725" y="390" width="155" height="90" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BoundaryError_Tastefejl_di" bpmnElement="BoundaryError_Tastefejl">
+        <dc:Bounds x="784" y="372" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="682" y="342" width="100" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_Loenfejl_di" bpmnElement="EndEvent_Loenfejl">
+        <dc:Bounds x="885" y="305" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="929" y="303" width="140" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_UdskiftKalender_di" bpmnElement="Activity_UdskiftKalender">
+        <dc:Bounds x="940" y="390" width="155" height="90" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_LoenKlargjort_di" bpmnElement="EndEvent_LoenKlargjort">
+        <dc:Bounds x="1155" y="417" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1127" y="460" width="92" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DataObjectRef_Papirkalender3_di" bpmnElement="DataObjectRef_Papirkalender3">
+        <dc:Bounds x="577" y="155" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="621" y="160" width="115" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_01_di" bpmnElement="Flow_01">
+        <di:waypoint x="281" y="180" />
+        <di:waypoint x="335" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_02_di" bpmnElement="Flow_02">
+        <di:waypoint x="415" y="225" />
+        <di:waypoint x="415" y="417" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_03_di" bpmnElement="Flow_03">
+        <di:waypoint x="433" y="435" />
+        <di:waypoint x="520" y="435" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_04_di" bpmnElement="Flow_04">
+        <di:waypoint x="670" y="435" />
+        <di:waypoint x="725" y="435" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Error_Tastefejl_di" bpmnElement="Flow_Error_Tastefejl">
+        <di:waypoint x="802" y="372" />
+        <di:waypoint x="802" y="323" />
+        <di:waypoint x="885" y="323" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_05_di" bpmnElement="Flow_05">
+        <di:waypoint x="880" y="435" />
+        <di:waypoint x="940" y="435" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_06_di" bpmnElement="Flow_06">
+        <di:waypoint x="1095" y="435" />
+        <di:waypoint x="1155" y="435" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DataOutputAssoc_Noter_di" bpmnElement="DataOutputAssoc_Noter">
+        <di:waypoint x="495" y="180" />
+        <di:waypoint x="577" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DataInputAssoc_Optael_di" bpmnElement="DataInputAssoc_Optael">
+        <di:waypoint x="595" y="205" />
+        <di:waypoint x="595" y="390" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MsgFlow_SalaryDK_di" bpmnElement="MsgFlow_SalaryDK">
+        <di:waypoint x="802" y="480" />
+        <di:waypoint x="802" y="670" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="810" y="612" width="145" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
